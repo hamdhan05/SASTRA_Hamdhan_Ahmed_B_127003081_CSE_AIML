@@ -1,9 +1,0 @@
-{
-  "chunk_size": 1200,
-  "chunk_overlap": 180,
-  "enable_table_extraction": true,
-  "ocr_enabled": false,
-  "flag_circular_dependencies": true,
-  "enforce_secure_ipc": true,
-  "require_boundary_definitions": true
-}
