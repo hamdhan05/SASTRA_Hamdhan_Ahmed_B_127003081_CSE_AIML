@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/License-Academic_Evaluation-purple.svg)](SASTRA_HamdhanAhmedB_127003081_CSE_AIML/LICENSE_OR_USAGE_NOTES.md)
 
 **Capstone Project & Tata Technologies Tech Pulse Submission**<br/>
-**Repository:** [https://github.com/hamdhan05/AUTOSAR-AI-Implementation](https://github.com/hamdhan05/AUTOSAR-AI-Implementation)<br/>
+**Repository:** [https://github.com/hamdhan05/SASTRA_Hamdhan_Ahmed_B_127003081_CSE_AIML](https://github.com/hamdhan05/SASTRA_Hamdhan_Ahmed_B_127003081_CSE_AIML)<br/>
 **Candidate:** Hamdhan Ahmed B (Register No: 127003081)<br/>
 **Program:** B.Tech. Computer Science & Engineering (AI & ML), SASTRA Deemed to be University, Thanjavur, India
 
