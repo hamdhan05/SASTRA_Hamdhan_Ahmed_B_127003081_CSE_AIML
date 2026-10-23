@@ -6,7 +6,89 @@ import requests
 
 # Ensure backend imports can be found
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+import streamlit.components.v1 as components
 from frontend.utils.ui import inject_custom_css, render_header
+
+def render_mermaid(code: str, height: int = 520):
+    """Renders a Mermaid diagram inside a sandboxed HTML component with full SVG rendering."""
+    clean_code = code.strip()
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+        <style>
+            * {{
+                box-sizing: border-box;
+            }}
+            body {{
+                margin: 0;
+                padding: 12px;
+                background-color: #FAFAFA;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                overflow: auto;
+            }}
+            #mermaid-wrapper {{
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: {height - 40}px;
+                background: #FFFFFF;
+                border: 1px solid #E2E8F0;
+                border-radius: 10px;
+                padding: 20px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                overflow: auto;
+            }}
+            .mermaid {{
+                width: 100%;
+                text-align: center;
+            }}
+            svg {{
+                max-width: 100% !important;
+                height: auto !important;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="mermaid-wrapper">
+            <pre class="mermaid">
+{clean_code}
+            </pre>
+        </div>
+        <script>
+            try {{
+                mermaid.initialize({{
+                    startOnLoad: true,
+                    theme: 'base',
+                    themeVariables: {{
+                        primaryColor: '#EFF6FF',
+                        primaryTextColor: '#1E3A8A',
+                        primaryBorderColor: '#2563EB',
+                        lineColor: '#64748B',
+                        secondaryColor: '#ECFDF5',
+                        tertiaryColor: '#FEF3C7',
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '13px'
+                    }},
+                    securityLevel: 'loose',
+                    flowchart: {{
+                        useMaxWidth: false,
+                        htmlLabels: true,
+                        curve: 'basis'
+                    }}
+                }});
+            }} catch (e) {{
+                document.getElementById('mermaid-wrapper').innerHTML = 
+                    '<div style="color: #DC2626; font-size: 14px; font-weight: 500;">Failed to render Mermaid diagram: ' + e.message + '</div>';
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_content, height=height, scrolling=True)
 
 st.set_page_config(page_title="Architecture Explorer - AUTOSAR AI", page_icon="🧩", layout="wide")
 inject_custom_css()
@@ -159,8 +241,26 @@ with tab_graph:
 
         mermaid_code = topo_data.get("mermaid_code", "graph TD;\n    empty[No graph data]")
 
-        # Render Mermaid Topology Diagram
-        st.markdown(f"```{mermaid_code}\n```")
+        # Orientation & Canvas controls
+        ctrl_c1, ctrl_c2, ctrl_c3 = st.columns([1, 1, 2])
+        with ctrl_c1:
+            graph_dir = st.selectbox("Diagram Orientation", ["Left to Right (LR)", "Top to Bottom (TD)"], index=0)
+        with ctrl_c2:
+            diagram_height = st.slider("Canvas Height", min_value=350, max_value=850, value=520, step=50)
+
+        # Apply user-chosen orientation
+        if "Top to Bottom" in graph_dir and mermaid_code.startswith("graph LR"):
+            active_mermaid = mermaid_code.replace("graph LR", "graph TD", 1)
+        elif "Left to Right" in graph_dir and mermaid_code.startswith("graph TD"):
+            active_mermaid = mermaid_code.replace("graph TD", "graph LR", 1)
+        else:
+            active_mermaid = mermaid_code
+
+        # Render visual interactive diagram
+        render_mermaid(active_mermaid, height=diagram_height)
+
+        with st.expander("📋 View Raw Mermaid Definition", expanded=False):
+            st.code(active_mermaid, language="mermaid")
 
     st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
     

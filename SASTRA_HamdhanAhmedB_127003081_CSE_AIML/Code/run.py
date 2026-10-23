@@ -10,6 +10,22 @@ def is_port_in_use(port: int, host: str = "127.0.0.1") -> bool:
         s.settimeout(0.5)
         return s.connect_ex((host, port)) == 0
 
+def ensure_env_and_dirs(script_dir: Path):
+    # Ensure data subdirectories exist
+    for sub in ["data", "data/uploads", "data/exports", "data/vector_store"]:
+        (script_dir / sub).mkdir(parents=True, exist_ok=True)
+    
+    # Ensure .env exists
+    env_path = script_dir / ".env"
+    example_path = script_dir / ".env.example"
+    if not env_path.exists() and example_path.exists():
+        try:
+            import shutil
+            shutil.copyfile(example_path, env_path)
+            print("[INFO] Auto-generated .env configuration from .env.example")
+        except Exception:
+            pass
+
 def find_python_interpreter() -> str:
     script_dir = Path(__file__).resolve().parent
 
@@ -17,17 +33,21 @@ def find_python_interpreter() -> str:
     try:
         import uvicorn
         import streamlit
+        import fastapi
         return sys.executable
     except ImportError:
         pass
 
-    # 2. Check for project virtual environments
+    # 2. Check for project virtual environments (.venv and venv, Windows & Unix)
     candidates = [
         script_dir / "venv" / "Scripts" / "python.exe",
         script_dir / "venv" / "bin" / "python",
-        script_dir.parent / "autosar-ai" / "venv" / "Scripts" / "python.exe",
+        script_dir / ".venv" / "Scripts" / "python.exe",
+        script_dir / ".venv" / "bin" / "python",
         script_dir.parent / "venv" / "Scripts" / "python.exe",
-        Path(r"H:\tech_pulse_project\autosar-ai\venv\Scripts\python.exe"),
+        script_dir.parent / "venv" / "bin" / "python",
+        script_dir.parent / ".venv" / "Scripts" / "python.exe",
+        script_dir.parent / ".venv" / "bin" / "python",
     ]
     for cand in candidates:
         if cand.is_file():
@@ -35,8 +55,40 @@ def find_python_interpreter() -> str:
 
     return sys.executable
 
+def ensure_dependencies(py_exec: str, script_dir: Path) -> bool:
+    try:
+        check = subprocess.run([py_exec, "-c", "import fastapi, uvicorn, streamlit"], capture_output=True)
+        if check.returncode == 0:
+            return True
+    except Exception:
+        pass
+
+    print("[WARN] Required packages (fastapi, uvicorn, streamlit) are missing for:")
+    print(f"       {py_exec}")
+    req_file = script_dir / "requirements.txt"
+    if req_file.exists():
+        print("[SETUP] Attempting automatic installation from requirements.txt...")
+        print("[INFO] This may take a minute on initial setup...")
+        try:
+            res = subprocess.run([py_exec, "-m", "pip", "install", "-r", str(req_file)])
+            if res.returncode == 0:
+                print("[READY] All dependencies installed successfully!")
+                return True
+        except Exception as e:
+            print(f"[ERROR] Auto-install failed: {e}")
+
+    print("\n" + "=" * 60)
+    print("ACTION REQUIRED: Please install dependencies manually:")
+    print("  1. Create virtual environment:  python -m venv venv")
+    print("  2. Activate it:                 .\\venv\\Scripts\\Activate.ps1  (or source venv/bin/activate)")
+    print("  3. Install dependencies:        pip install -r requirements.txt")
+    print("  4. Re-run:                      python run.py")
+    print("=" * 60 + "\n")
+    return False
+
 def start_services():
     script_dir = Path(__file__).resolve().parent
+    ensure_env_and_dirs(script_dir)
     py_exec = find_python_interpreter()
 
     print("=" * 60)
@@ -45,6 +97,9 @@ def start_services():
     if py_exec != sys.executable:
         print(f"[INFO] Using virtual environment interpreter:")
         print(f"       {py_exec}")
+
+    if not ensure_dependencies(py_exec, script_dir):
+        return
     
     processes = []
     
